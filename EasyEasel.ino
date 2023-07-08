@@ -17,7 +17,7 @@ enum easel_request{
 };
 
 int SOAP_DISPENSE_POWER = 87;
-int MARKER_CLAMP_POWER = 100;
+int MARKER_CLAMP_POWER = 160;
 int HOME_POWER = 120;
 int RESET_TO_IDLE_POWER = 88;
 
@@ -87,7 +87,7 @@ void loop() {
 
     // setting positions to 0
     pos = 0.0;
-    lastPos = encoderPosition;
+    lastPos = encoderPosition; // delta should read 0
 
     // Transition
     if (isHomed){
@@ -203,21 +203,15 @@ void loop() {
 
   if (digitalRead(MARKER_CLAMP_BUTTON) == HIGH){
     current_request = MARKER_CLAMP_REQ;
+    delay(2000);
   } else if (digitalRead(SOAP_DISPENSE_BUTTON) == HIGH){
     current_request = SOAP_DISPENSE_REQ;
+    delay(2000);
   } else if (digitalRead(RESET_BUTTON) == HIGH){
     current_request = RESET_REQ;
   } else {
     current_request = IDLE_REQ;
   }
-
-  // we want continuity going from 1.0 on encoder to 0.0
-  float delta1 = (encoderPosition - lastPos); 
-  float delta2 = (encoderPosition - lastPos + MAX_POS);
-  float delta3 = (encoderPosition - lastPos - MAX_POS);
-
-  // checking to see which of these deltas is the smallest in abs value helps us do that
-  float pos_delta = minimumInAbsoluteValue(delta1, delta2, delta3);
 
   
   if (!isnan(encoderPosition)){
@@ -238,26 +232,6 @@ void loop() {
 
 int secondsToMilliseconds(float seconds){
   return seconds * 1000;
-}
-
-float minimumInAbsoluteValue(float val1, float val2, float val3){
-  float magnitude = min(abs(val1), min(abs(val2), abs(val3)));
-
-  if (magnitude == abs(val1)){
-    return val1;
-  }
-
-  if (magnitude == abs(val2)){
-    return val2;
-  }
-
-  if (magnitude == abs(val3)){
-    return val3;
-  }
-}
-
-float getOffsetEncoderPosition(){
-  return pos;
 }
 
 float getEncoderPosition(){
