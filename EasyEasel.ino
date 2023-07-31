@@ -172,7 +172,7 @@ void loop() {
       }
 
       // Transition
-      if (reachedPosition || (millis() - lastDispenseTime <= secondsToMilliseconds(RESET_THRESHOLD_FOR_SOAP_DISPENSE))){
+      if (reachedPosition || (millis() - lastDispenseTime >= secondsToMilliseconds(RESET_THRESHOLD_FOR_SOAP_DISPENSE))){
         startedDispensing = false;
         next_state = RESET_TO_IDLE;
       }
