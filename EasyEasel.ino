@@ -20,6 +20,7 @@ int SOAP_DISPENSE_POWER = 87;
 int MARKER_CLAMP_POWER = 160;
 int HOME_POWER = 120;
 int RESET_TO_IDLE_POWER = 88;
+int RESET_THRESHOLD_FOR_SOAP_DISPENSE = 2.0; //seconds
 
 float MAX_POS = 8.37862759755; // inches
 float GEAR_DIAMETER = 2.667; // inches
@@ -29,6 +30,9 @@ int SOAP_DISPENSE_BUTTON = 6;
 int MARKER_CLAMP_BUTTON = 8;
 int RESET_BUTTON = 7;
 int PWM_PIN = 9;
+int R_PIN = 11;
+int G_PIN = 10;
+int B_PIN = 12; // b //
 int ENCODER_PIN = 3;
 
 easel_state current_state = UNINITIALIZED;
@@ -60,6 +64,9 @@ Servo myservo;
 void setup() {
   Serial.begin(9600);
   myservo.attach(PWM_PIN);
+  pinMode(R_PIN, OUTPUT);
+  pinMode(G_PIN, OUTPUT);
+  pinMode(B_PIN, OUTPUT);
   delay(1000); // pwm duty cycle is scuffed immediately after setup 
 }
 
@@ -69,11 +76,14 @@ void loop() {
   easel_state next_state = current_state;
   if(current_state == UNINITIALIZED){
       // Output
+      setColor(0, 255, 255);
 
       // Transition
       next_state = HOMING;
   } else if(current_state == HOMING){
     // Output
+    setColor(0, 255, 255);
+
     if (!startedHoming){
       lastHomeTime = millis(); // only want to set the home time once (state machines are periodic)
       startedHoming = true;
@@ -99,6 +109,7 @@ void loop() {
     }
   } else if(current_state == IDLE){
       // Output
+      setColor(255, 0, 255);
       // Do nothing during Idle
 
       // Transition
@@ -122,6 +133,7 @@ void loop() {
       }
     } else if(current_state == MARKER_CLAMP){
       // Output
+      setColor(0,0,255);
 
       if (!startedClamping){
         lastClampTime = millis();
@@ -138,40 +150,35 @@ void loop() {
         next_state = IDLE;
       }
     } else if(current_state == SOAP_DISPENSE){
-      // // Output
-      // if (!startedDispensing){
-      //   lastDispenseTime = millis();
-      //   startedDispensing = true;
-      // }
+      // Output
+      setColor(255,255,0);
 
-      // // Transition
-      // if (millis() - lastDispenseTime <= secondsToMilliseconds(0.75)){
-      //   applied_output = SOAP_DISPENSE_POWER;
-      // } else {
-      //   startedClamping = false;
-      //   next_state = HOMING;
-
-      // We assume that we're at homed position when we're in this state
+      if (!startedDispensing){
+        lastDispenseTime = millis();
+        startedDispensing = true;
+      }
 
       bool reachedPosition = false;
 
-      float desiredPosition = 4.0;
+      float desiredPosition = 2.75;
 
       if ((abs(pos - desiredPosition) <= 0.5)){
         applied_output = 92;
         reachedPosition = true;
       } else if ((pos - desiredPosition) < 0){
-        applied_output = 88; // outward
+        applied_output = 85; // outward
       } else {
         applied_output = 96; // inward
       }
 
       // Transition
-      if (reachedPosition){
-        next_state = IDLE;
+      if (reachedPosition || (millis() - lastDispenseTime <= secondsToMilliseconds(RESET_THRESHOLD_FOR_SOAP_DISPENSE))){
+        startedDispensing = false;
+        next_state = RESET_TO_IDLE;
       }
     } else if(current_state == RESET_TO_IDLE){
       // Output
+      setColor(255, 0, 255);
       // We assume that we're at homed position when we're in this state
 
       bool reachedPosition = false;
@@ -226,7 +233,7 @@ void loop() {
     lastPos = encoderPosition;
   }
 
-  Serial.println(pos);
+  Serial.println(current_state);
   
 }
 
@@ -260,4 +267,10 @@ float convertedEncoderOutput(){
 
 bool epsilonEquals(float a, float b){
   return abs(a - b) < 0.1;
+}
+
+void setColor(int r, int g, int b){
+  analogWrite(R_PIN, r);
+  analogWrite(G_PIN, g);
+  analogWrite(B_PIN, b);
 }
